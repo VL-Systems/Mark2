@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  
+
+        <!-- Combine joint values -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/>
+    <arg name="robot" default="mybot"/>
+    <arg name="localization_type" default="FIXED_ODOM"/>
+    <!-- Possible variants
+        FIXED_ODOM   
+        AMCL
+        GMAPPING
+    -->
+    <arg name="map" default="creech"/>
+    <arg name="aruco_reacher" default="simple"/>
+
+    <!-- URDF description -->
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(find mark2_description)/urdf/mark2.xacro'"/>
+    
+    <!-- TF stuff -->
+    <!-- send fake joint values -->
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+        <param name="use_gui" value="False"/>
+    </node>
+
+    <!-- Combine joint values -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/>
+        
+    
+    
+    <!-- fixed odom -->
+    <node if="$(eval localization_type == 'FIXED_ODOM')" pkg="tf" type="static_transform_publisher" name="static_odom_broadcaster"
+        args="0 0 0 0 0 0 map odom 100"/>  
+    
+    <!-- Run the map server --> 
+    <group if="$(eval localization_type == 'AMCL')" >
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find mark2_2dnav)/config/map_empty.yaml"/>    
+
+    	<!--- Run AMCL --> 
+    	<node name="amcl"  pkg="amcl" type="amcl" output="screen">
+        	<!-- Publish scans from best pose at a max of 10 Hz -->
+        	<param name="odom_model_type" value="diff"/>
+        	<param name="odom_alpha5" value="0.1"/>
+        	<param name="transform_tolerance" value="0.2" />
+        	<param name="gui_publish_rate" value="10.0"/>
+        	<param name="laser_max_beams" value="30"/>
+        	<param name="min_particles" value="500"/>
+        	<param name="max_particles" value="1000"/>
+        	<param name="kld_err" value="0.05"/>
+        	<param name="kld_z" value="0.99"/>
+        	<param name="odom_alpha1" value="0.2"/>
+        	<param name="odom_alpha2" value="0.2"/>
+        	<!-- translation std dev, m -->
+        	<param name="odom_alpha3" value="0.8"/>
+        	<param name="odom_alpha4" value="0.2"/>
+        	<param name="laser_z_hit" value="0.5"/>
+        	<param name="laser_z_short" value="0.05"/>
+        	<param name="laser_z_max" value="0.05"/>
+        	<param name="laser_z_rand" value="0.5"/>
+        	<param name="laser_sigma_hit" value="0.2"/>
+        	<param name="laser_lambda_short" value="0.1"/>
+        	<param name="laser_lambda_short" value="0.1"/>
+        	<param name="laser_model_type" value="likelihood_field_prob"/>
+        	<!-- <param name="laser_model_type" value="beam"/> -->
+        	<param name="laser_likelihood_max_dist" value="2.0"/>
+        	<param name="update_min_d" value="0.2"/>
+        	<param name="update_min_a" value="0.5"/>
+        	<param name="odom_frame_id" value="odom"/>
+        	<param name="resample_interval" value="1"/>
+        	<param name="transform_tolerance" value="0.1"/>
+        	<param name="recovery_alpha_slow" value="0.07"/>
+        	<param name="recovery_alpha_fast" value="0.20"/>
+        
+        	<param name="initial_cov_xx" value="1"/>
+        	<param name="initial_cov_yy" value="1"/>
+        	<param name="initial_cov_aa" value="9"/>
+        
+        
+        	<param name="use_map_topic" value="true"/>
+        	<param name="base_frame_id" value="base_link"/>
+        	<remap from="scan" to="laser/scan"/>        
+    	</node>  
+    </group>          
+    
+    <!-- gmapping -->
+    <node if="$(eval localization_type == 'GMAPPING')" name="gmapping" pkg="gmapping" type="slam_gmapping"  output="screen">                
+        <param name="base_frame" value="base_link"/>
+        <param name="maxRange" value="29"/>
+        <param name="maxRange" value="30"/>
+        <remap from="scan" to="laser/scan"/>        
+    </node>
+         
+    <!-- navigation -->
+    <include file="$(find mark2_2dnav)/launch/mark2_move_base.launch"> 
+        
+    </include>
+    
+</launch>
