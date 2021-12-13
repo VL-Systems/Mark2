@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+    <!-- global params-->
+    <arg name="robot" default="mark2"/>
+
+    <!-- URDF description -->
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(find mark2_description)/urdf/mark2.xacro'"/>
+
+    <!-- send fake joint values -->
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+        <param name="use_gui" value="False"/>
+    </node>
+
+    <!-- Combine joint values -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+
+    <!-- run gazebo and spawn mark2 -->
+    <include file="$(find mark2_gazebo)/launch/mark2_world.launch">
+
+    </include>
+
+
+    <!-- software -->
+    <include file="$(find mark2_config)/launch/mark2_software.launch">
+
+    </include>
+
+    <!-- visualization -->
+    <node name="rviz" pkg="rviz" type="rviz"/>
+
+</launch>
